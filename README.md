@@ -24,3 +24,9 @@ A modern, responsive web application for a premium Indian restaurant, built usin
 1. **Clone the repository**
    ```powershell
    git clone [https://github.com/YOUR_USERNAME/SaffronAndSpiceWeb.git](https://github.com/YOUR_USERNAME/SaffronAndSpiceWeb.git)
+2. **Navigate to the project folder**
+   ```powershell
+   cd SaffronAndSpiceWeb
+3. **Run the application**
+   ```powershell
+   dotnet watch
