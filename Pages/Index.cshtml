@@ -1,0 +1,183 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Saffron & Spice | Authentic Indian Cuisine";
+}
+
+<style>
+    :root {
+        --spice-orange: #E67E22;
+        --deep-gold: #D4AC0D;
+        --curry-red: #A93226;
+        --dark-bg: #1a1a1a;
+    }
+    .btn-spice { background-color: var(--spice-orange); color: white; border: none; transition: 0.3s; }
+    .btn-spice:hover { background-color: var(--curry-red); color: white; transform: translateY(-2px); }
+    .text-gold { color: var(--deep-gold); }
+    .text-spice { color: var(--spice-orange); }
+    
+    .hero-bg {
+        background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
+                    url('https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=1200&q=80');
+        background-size: cover;
+        background-position: center;
+        min-height: 60vh;
+        display: flex;
+        align-items: center;
+    }
+
+    .card { transition: transform 0.3s ease; }
+    .card:hover { transform: scale(1.02); }
+    .menu-section-title { position: relative; padding-bottom: 10px; margin-bottom: 30px; }
+    .menu-section-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80px;
+        height: 3px;
+        background-color: var(--deep-gold);
+    }
+</style>
+
+<header class="hero-bg text-white text-center">
+    <div class="container">
+        <h1 class="display-1 fw-bold mb-3">Saffron & Spice</h1>
+        <p class="lead mb-4 fs-3 fst-italic">A Journey Through the Heart of India</p>
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+            <a href="#menu" class="btn btn-spice btn-lg px-5 shadow">Explore Menu</a>
+            <a href="#book" class="btn btn-outline-warning btn-lg px-5">Book a Table</a>
+        </div>
+    </div>
+</header>
+
+<main class="container my-5" id="menu">
+    <div class="text-center mb-5">
+        <h2 class="display-4 fw-bold">Our Menu</h2>
+        <p class="text-muted">Hand-crafted recipes passed down through generations</p>
+    </div>
+
+    <div class="mb-5">
+        <h3 class="text-center text-gold menu-section-title">Appetizers</h3>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <img src="https://images.unsplash.com/photo-1601050690597-df056fb0ce79?auto=format&fit=crop&w=500&q=80" class="card-img-top" alt="Samosa">
+                    <div class="card-body">
+                        <h5 class="card-title">Vegetable Samosa</h5>
+                        <p class="card-text text-muted small">Flaky pastry filled with spiced potatoes and peas.</p>
+                        <h5 class="text-spice fw-bold">$7.00</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <img src="https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=500&q=80" class="card-img-top" alt="Chicken 65">
+                    <div class="card-body">
+                        <h5 class="card-title">Chicken 65</h5>
+                        <p class="card-text text-muted small">Spicy, deep-fried chicken tempered with curry leaves.</p>
+                        <h5 class="text-spice fw-bold">$12.00</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <img src="https://images.unsplash.com/photo-1626132644529-36f823f92651?auto=format&fit=crop&w=500&q=80" class="card-img-top" alt="Gobi Manchurian">
+                    <div class="card-body">
+                        <h5 class="card-title">Gobi Manchurian</h5>
+                        <p class="card-text text-muted small">Crispy cauliflower in a tangy Indo-Chinese sauce.</p>
+                        <h5 class="text-spice fw-bold">$10.50</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-5">
+        <h3 class="text-center text-gold menu-section-title">Signature Mains</h3>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 shadow border-0 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=500&q=80" class="card-img-top" alt="Butter Chicken">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <h5 class="card-title">Butter Chicken</h5>
+                            <span class="badge bg-danger h-25">Popular</span>
+                        </div>
+                        <p class="card-text text-muted small">Tender chicken in a rich, creamy tomato gravy.</p>
+                        <h5 class="text-spice fw-bold">$19.00</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 shadow border-0 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=500&q=80" class="card-img-top" alt="Hyderabadi Biryani">
+                    <div class="card-body">
+                        <h5 class="card-title">Hyderabadi Biryani</h5>
+                        <p class="card-text text-muted small">Aromatic basmati rice cooked with slow-cooked lamb.</p>
+                        <h5 class="text-spice fw-bold">$22.00</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 shadow border-0 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1516714435131-44d6b64dc6a2?auto=format&fit=crop&w=500&q=80" class="card-img-top" alt="Dal Makhani">
+                    <div class="card-body">
+                        <h5 class="card-title">Dal Makhani</h5>
+                        <p class="card-text text-muted small">Slow-cooked black lentils with cream and spices.</p>
+                        <h5 class="text-spice fw-bold">$15.00</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-5">
+        <h3 class="text-center text-gold menu-section-title">Breads & Desserts</h3>
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card h-100 shadow-sm border-0 d-flex flex-row overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?auto=format&fit=crop&w=200&q=80" style="width: 150px; object-fit: cover;" alt="Naan">
+                    <div class="card-body">
+                        <h5 class="card-title">Garlic Naan</h5>
+                        <p class="card-text text-muted small">Freshly baked in the tandoor with garlic butter.</p>
+                        <h5 class="text-spice">$4.00</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100 shadow-sm border-0 d-flex flex-row overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1591206111081-1756b342e2a1?auto=format&fit=crop&w=200&q=80" style="width: 150px; object-fit: cover;" alt="Gulab Jamun">
+                    <div class="card-body">
+                        <h5 class="card-title">Gulab Jamun</h5>
+                        <p class="card-text text-muted small">Milk dumplings soaked in cardamom rose syrup.</p>
+                        <h5 class="text-spice">$6.50</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="bg-dark text-light py-5 mt-5" id="book">
+    <div class="container">
+        <div class="row text-center gy-4">
+            <div class="col-md-4">
+                <h4 class="text-gold mb-3">Visit Us</h4>
+                <p>123 Spice Lane, Seattle, WA 98101<br>Tel: (206) 555-0199</p>
+            </div>
+            <div class="col-md-4 border-start border-end border-secondary">
+                <h4 class="text-gold mb-3">Hours</h4>
+                <p>Tue - Sun: 11 AM - 10 PM<br>Closed on Mondays</p>
+            </div>
+            <div class="col-md-4">
+                <h4 class="text-gold mb-3">Join the Newsletter</h4>
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Email Address">
+                    <button class="btn btn-spice">Join</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
