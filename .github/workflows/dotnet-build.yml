@@ -1,0 +1,30 @@
+name: SaffronAndSpiceWeb Build Pipeline
+
+# Trigger the workflow on every push to the main branch
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # The VM that will run your code
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4 # Downloads your code to the VM
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x' # Matches the .NET version you used
+
+    - name: Restore Dependencies
+      run: dotnet restore
+
+    - name: Build Application
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Test Application
+      run: dotnet test --configuration Release --no-build --verbosity normal
