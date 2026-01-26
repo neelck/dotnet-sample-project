@@ -30,7 +30,7 @@ resource "azurerm_network_interface" "nic" {
   ip_configuration {
     name                          = "restaurant-ip"
     subnet_id                     = azurerm_subnet.subnet.id
-    private_ip_address_allocation = "Static"
+    private_ip_address_allocation = "Dynamic"
   }
 }
 
