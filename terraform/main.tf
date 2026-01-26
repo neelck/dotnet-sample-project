@@ -73,7 +73,6 @@ resource "azurerm_network_security_group" "nsg" {
     destination_address_prefix = "*"
   }
 }
-}
 
 # Create the VM
 resource "azurerm_windows_virtual_machine" "vm" {
