@@ -32,27 +32,29 @@ jobs:
       - name: Deploy to Azure VM
         run: |
         
-          # 1. Capture variables
+         # 1. Capture variables from GitHub context
           $runnerRunId = "${{ github.event.workflow_run.id || github.event.inputs.manual_run_id }}"
           $runnerToken = "${{ secrets.GITHUB_TOKEN }}"
-
-          # 2. Write the script to a file (Using $args for safety)
+          
+          # 2. Define the script content
+          #    CRITICAL CHANGE: We inject $runnerRunId and $runnerToken directly here.
+          #    - We do NOT use backticks for these two, so the Runner fills them in.
+          #    - We use backticks (`$) for everything else, so the VM handles it.
           $scriptContent = @"
-            # NOTE: We removed the 'Param()' block to avoid binding errors.
-            # We explicitly grab the arguments by position.
-            `$RunId = `$args[0]
-            `$Token = `$args[1]
-
-            # Verify inputs immediately
+            # --- BAKED IN VALUES ---
+            `$RunId = "$runnerRunId"
+            `$Token = "$runnerToken"
+            
+            # --- START DIAGNOSTICS ---
+            Write-Output "DEBUG: Script started."
+            Write-Output "DEBUG: Using RunID: `$RunId"
+            
             if ([string]::IsNullOrWhiteSpace(`$RunId)) {
-                Write-Error "CRITICAL: RunID argument is EMPTY. Check the Azure CLI command parameters."
+                Write-Error "CRITICAL: RunID is empty. The GitHub Runner failed to inject it."
                 exit 1
             }
 
             try {
-                Write-Output "DEBUG: Starting script..."
-                Write-Output "DEBUG: Received RunID: [params] `$RunId"
-
                 `$headers = @{ 
                     'Authorization' = 'Bearer ' + `$Token
                     'Accept'        = 'application/vnd.github+json'
@@ -65,14 +67,13 @@ jobs:
 
                 `$resp = Invoke-RestMethod -Uri `$apiUrl -Headers `$headers -ErrorAction Stop
                 
-                # ... Rest of your download logic ...
                 `$artifact = `$resp.artifacts | Where-Object { `$_.name -like 'restaurant-app-*' } | Select-Object -First 1
                 
                 if (!`$artifact) { throw "Artifact not found for Run ID `$RunId" }
 
                 `$downloadUrl = `$artifact.archive_download_url
                 
-                # Handle Redirect
+                # Handle Redirects (Azure Storage rejects GitHub Tokens)
                 `$redirect = Invoke-WebRequest -Uri `$downloadUrl -Headers `$headers -MaximumRedirection 0 -ErrorAction SilentlyContinue
                 `$finalUrl = `$redirect.Headers.Location
                 if (!`$finalUrl) { `$finalUrl = `$downloadUrl }
@@ -81,9 +82,14 @@ jobs:
                 Invoke-WebRequest -Uri `$finalUrl -OutFile 'C:/temp/app.zip'
 
                 Write-Output "DEBUG: Deploying..."
-                Expand-Archive -Path 'C:/temp/app.zip' -DestinationPath 'C:/inetpub/wwwroot' -Force
-                iisreset
+                # Stop IIS to unlock files
+                Stop-Service w3svc
                 
+                # Clean and Extract
+                Remove-Item 'C:/inetpub/wwwroot/*' -Recurse -Force -ErrorAction SilentlyContinue
+                Expand-Archive -Path 'C:/temp/app.zip' -DestinationPath 'C:/inetpub/wwwroot' -Force
+                
+                Start-Service w3svc
                 Write-Output "SUCCESS: Deployment Complete."
             }
             catch {
@@ -92,13 +98,12 @@ jobs:
             }
           "@
           
+          # 3. Save to file
           Set-Content -Path "deploy.ps1" -Value $scriptContent
 
-          # 3. Send the FILE to Azure
-          # Ensure you keep the quotes around "@deploy.ps1"
+          # 4. Send the FILE to Azure (No parameters needed anymore!)
           az vm run-command invoke `
             --resource-group SaffronRestaurant-RG `
             --name Saffron-VM `
             --command-id RunPowerShellScript `
-            --scripts "@deploy.ps1" `
-            --parameters "$runnerRunId" "$runnerToken"
+            --scripts "@deploy.ps1"
