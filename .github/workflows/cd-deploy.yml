@@ -35,18 +35,23 @@ jobs:
           # 1. Capture variables
           $runnerRunId = "${{ github.event.workflow_run.id || github.event.inputs.manual_run_id }}"
           $runnerToken = "${{ secrets.GITHUB_TOKEN }}"
-          
-          # 2. Write the script to a physical file (safest method)
+
+          # 2. Write the script to a file (Using $args for safety)
           $scriptContent = @"
-            Param(
-                [string]`$RunId, 
-                [string]`$Token
-            )
-            
-            # Use a Try/Catch to ensure we see ANY error that happens
+            # NOTE: We removed the 'Param()' block to avoid binding errors.
+            # We explicitly grab the arguments by position.
+            `$RunId = `$args[0]
+            `$Token = `$args[1]
+
+            # Verify inputs immediately
+            if ([string]::IsNullOrWhiteSpace(`$RunId)) {
+                Write-Error "CRITICAL: RunID argument is EMPTY. Check the Azure CLI command parameters."
+                exit 1
+            }
+
             try {
                 Write-Output "DEBUG: Starting script..."
-                Write-Output "DEBUG: Received RunID: `$RunId"
+                Write-Output "DEBUG: Received RunID: [params] `$RunId"
 
                 `$headers = @{ 
                     'Authorization' = 'Bearer ' + `$Token
@@ -54,26 +59,28 @@ jobs:
                     'X-GitHub-Api-Version' = '2022-11-28'
                 }
 
+                # Construct URL
                 `$apiUrl = "https://api.github.com/repos/${{ github.repository }}/actions/runs/`$RunId/artifacts"
                 Write-Output "DEBUG: Fetching URL: `$apiUrl"
 
                 `$resp = Invoke-RestMethod -Uri `$apiUrl -Headers `$headers -ErrorAction Stop
                 
+                # ... Rest of your download logic ...
                 `$artifact = `$resp.artifacts | Where-Object { `$_.name -like 'restaurant-app-*' } | Select-Object -First 1
                 
                 if (!`$artifact) { throw "Artifact not found for Run ID `$RunId" }
 
                 `$downloadUrl = `$artifact.archive_download_url
                 
-                # Handle Azure Storage Redirect
+                # Handle Redirect
                 `$redirect = Invoke-WebRequest -Uri `$downloadUrl -Headers `$headers -MaximumRedirection 0 -ErrorAction SilentlyContinue
                 `$finalUrl = `$redirect.Headers.Location
                 if (!`$finalUrl) { `$finalUrl = `$downloadUrl }
 
-                Write-Output "DEBUG: Downloading from Azure Storage..."
+                Write-Output "DEBUG: Downloading zip..."
                 Invoke-WebRequest -Uri `$finalUrl -OutFile 'C:/temp/app.zip'
 
-                Write-Output "DEBUG: Deploying to IIS..."
+                Write-Output "DEBUG: Deploying..."
                 Expand-Archive -Path 'C:/temp/app.zip' -DestinationPath 'C:/inetpub/wwwroot' -Force
                 iisreset
                 
@@ -85,11 +92,10 @@ jobs:
             }
           "@
           
-          # Save to a file named deploy.ps1
           Set-Content -Path "deploy.ps1" -Value $scriptContent
 
-          # 3. Send the FILE to Azure using the '@' symbol
-          #    Pass parameters explicitly enclosed in quotes
+          # 3. Send the FILE to Azure
+          # Ensure you keep the quotes around "@deploy.ps1"
           az vm run-command invoke `
             --resource-group SaffronRestaurant-RG `
             --name Saffron-VM `
