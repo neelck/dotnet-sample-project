@@ -47,7 +47,7 @@ jobs:
               }
               
               # B. Query GitHub API for the Artifact download URL
-              $apiUrl = 'https://api.github.com/repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts'
+              $apiUrl = "https://api.github.com/repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts"
               $resp = Invoke-RestMethod -Uri $apiUrl -Headers $headers
               
               # C. Find our specific restaurant app zip
