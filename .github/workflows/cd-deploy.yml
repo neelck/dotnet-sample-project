@@ -101,3 +101,26 @@ jobs:
             --name Saffron-VM `
             --command-id RunPowerShellScript `
             --scripts "@deploy.ps1"
+
+      - name: Install dotnet
+        run: |
+
+          az vm run-command invoke `
+          --resource-group SaffronRestaurant-RG `
+          --name Saffron-VM `
+          --command-id RunPowerShellScript `
+          --scripts "
+            Write-Output '--- FIXING 500.31 ERROR ---'
+            $url = 'https://aka.ms/dotnet/9.0/dotnet-hosting-win.exe'
+            $output = 'C:\dotnet-hosting.exe'
+            
+            # 1. Download
+            # Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing
+            
+            # 2. Install
+            Start-Process -FilePath $output -ArgumentList '/install', '/quiet', '/norestart' -Wait
+            
+            # 3. Restart IIS
+            net stop w3svc
+            net start w3svc
+            "
