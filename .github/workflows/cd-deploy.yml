@@ -32,62 +32,49 @@ jobs:
       - name: Install .NET 9 Hosting Bundle
         shell: pwsh
         run: |
-          # Define the installation script
-          $installScript = @"
-            $ErrorActionPreference = 'Stop'
-            Write-Output '--- [START] INSTALLING .NET 9 RUNTIME ---'
+        
+          $forceInstallScript = @"
+            # 1. Setup - Stop on any error
+            `$ErrorActionPreference = 'Stop'
+            Write-Output '--- [START] FORCING .NET 9 INSTALL ---'
 
-            # 1. Define Paths
+            # 2. Download (Overwrite if exists)
             `$url = 'https://aka.ms/dotnet/9.0/dotnet-hosting-win.exe'
             `$output = 'C:\temp\dotnet-hosting.exe'
             
-            # 2. Check if already installed
-            try {
-                `$current = dotnet --info
-                if (`$current -match 'Microsoft.AspNetCore.App 9.') {
-                    Write-Output 'SKIPPING: .NET 9 is already installed.'
-                    exit 0
-                }
-            } catch {
-                Write-Output 'STATUS: No existing dotnet found. Proceeding with install.'
-            }
-
-            # 3. Download (With Verbose Output)
             if (!(Test-Path 'C:\temp')) { New-Item -ItemType Directory -Force -Path 'C:\temp' | Out-Null }
-            Write-Output "DOWNLOADING: `$url"
-            Invoke-WebRequest -Uri `$url -OutFile `$output -UseBasicParsing
             
-            # 4. Install Silently
-            Write-Output 'INSTALLING: Running silent installer...'
+            Write-Output "DOWNLOADING from: `$url"
+            Invoke-WebRequest -Uri `$url -OutFile `$output -UseBasicParsing
+
+            # 3. Install (Force Repair/Install)
+            # We add '/repair' in case a broken install exists, but usually '/install' handles both.
+            Write-Output 'INSTALLING: Running installer...'
+            
+            # Note: We use -Wait to ensure it finishes before we move on
             `$process = Start-Process -FilePath `$output -ArgumentList '/install', '/quiet', '/norestart' -Wait -PassThru
             
-            if (`$process.ExitCode -eq 0 -or `$process.ExitCode -eq 3010) {
-                Write-Output "SUCCESS: Installer finished with code `$(`$process.ExitCode)."
-            } else {
-                Write-Error "FAILURE: Installer failed with code `$(`$process.ExitCode)."
-                exit 1
-            }
+            Write-Output "INSTALLER FINISHED with Exit Code: `$(`$process.ExitCode)"
 
-            # 5. Restart IIS (Critical for loading the module)
-            Write-Output 'RESTARTING: IIS World Wide Web Publishing Service...'
+            # 4. Restart IIS (Critical)
+            Write-Output 'RESTARTING IIS...'
             net stop w3svc
             net start w3svc
 
-            # 6. Final Verification
-            Write-Output '--- [VERIFICATION] ---'
-            dotnet --info
+            # 5. Proof of Life
+            Write-Output '--- [REALITY CHECK] ---'
+            Write-Output 'If this list is empty, the install failed:'
+            dotnet --list-runtimes
             Write-Output '--- [END] ---'
           "@
 
-          # Write to file to avoid quoting issues
-          Set-Content -Path "install_dotnet.ps1" -Value $installScript
+          Set-Content -Path "force_install.ps1" -Value $forceInstallScript
 
-          # Execute on VM
           az vm run-command invoke `
             --resource-group SaffronRestaurant-RG `
             --name Saffron-VM `
             --command-id RunPowerShellScript `
-            --scripts "@install_dotnet.ps1"
+            --scripts "@force_install.ps1"
 
       - name: Deploy to Azure VM
         run: |
