@@ -28,6 +28,66 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      - name: Install .NET 9 Hosting Bundle
+        shell: pwsh
+        run: |
+          # Define the installation script
+          $installScript = @"
+            $ErrorActionPreference = 'Stop'
+            Write-Output '--- [START] INSTALLING .NET 9 RUNTIME ---'
+
+            # 1. Define Paths
+            `$url = 'https://aka.ms/dotnet/9.0/dotnet-hosting-win.exe'
+            `$output = 'C:\temp\dotnet-hosting.exe'
+            
+            # 2. Check if already installed
+            try {
+                `$current = dotnet --info
+                if (`$current -match 'Microsoft.AspNetCore.App 9.') {
+                    Write-Output 'SKIPPING: .NET 9 is already installed.'
+                    exit 0
+                }
+            } catch {
+                Write-Output 'STATUS: No existing dotnet found. Proceeding with install.'
+            }
+
+            # 3. Download (With Verbose Output)
+            if (!(Test-Path 'C:\temp')) { New-Item -ItemType Directory -Force -Path 'C:\temp' | Out-Null }
+            Write-Output "DOWNLOADING: `$url"
+            Invoke-WebRequest -Uri `$url -OutFile `$output -UseBasicParsing
+            
+            # 4. Install Silently
+            Write-Output 'INSTALLING: Running silent installer...'
+            `$process = Start-Process -FilePath `$output -ArgumentList '/install', '/quiet', '/norestart' -Wait -PassThru
+            
+            if (`$process.ExitCode -eq 0 -or `$process.ExitCode -eq 3010) {
+                Write-Output "SUCCESS: Installer finished with code `$(`$process.ExitCode)."
+            } else {
+                Write-Error "FAILURE: Installer failed with code `$(`$process.ExitCode)."
+                exit 1
+            }
+
+            # 5. Restart IIS (Critical for loading the module)
+            Write-Output 'RESTARTING: IIS World Wide Web Publishing Service...'
+            net stop w3svc
+            net start w3svc
+
+            # 6. Final Verification
+            Write-Output '--- [VERIFICATION] ---'
+            dotnet --info
+            Write-Output '--- [END] ---'
+          "@
+
+          # Write to file to avoid quoting issues
+          Set-Content -Path "install_dotnet.ps1" -Value $installScript
+
+          # Execute on VM
+          az vm run-command invoke `
+            --resource-group SaffronRestaurant-RG `
+            --name Saffron-VM `
+            --command-id RunPowerShellScript `
+            --scripts "@install_dotnet.ps1"
 
       - name: Deploy to Azure VM
         run: |
@@ -101,26 +161,3 @@ jobs:
             --name Saffron-VM `
             --command-id RunPowerShellScript `
             --scripts "@deploy.ps1"
-
-      - name: Install dotnet
-        run: |
-
-          az vm run-command invoke `
-          --resource-group SaffronRestaurant-RG `
-          --name Saffron-VM `
-          --command-id RunPowerShellScript `
-          --scripts "
-            Write-Output '--- FIXING 500.31 ERROR ---'
-            $url = 'https://aka.ms/dotnet/9.0/dotnet-hosting-win.exe'
-            $output = 'C:\dotnet-hosting.exe'
-            
-            # 1. Download
-            # Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing
-            
-            # 2. Install
-            Start-Process -FilePath $output -ArgumentList '/install', '/quiet', '/norestart' -Wait
-            
-            # 3. Restart IIS
-            net stop w3svc
-            net start w3svc
-            "
