@@ -37,7 +37,7 @@ jobs:
           $runnerToken = "${{ secrets.GITHUB_TOKEN }}"
           
           # 2. Define the script content
-          # CRITICAL FIX: The closing "@" below is now un-indented.
+          # FIX: Added -UseBasicParsing to all web requests
           $scriptContent = @"
             # --- BAKED IN VALUES ---
             `$RunId = "$runnerRunId"
@@ -47,7 +47,7 @@ jobs:
             Write-Output "DEBUG: Using RunID: `$RunId"
             
             if ([string]::IsNullOrWhiteSpace(`$RunId)) {
-                Write-Error "CRITICAL: RunID is empty. The GitHub Runner failed to inject it."
+                Write-Error "CRITICAL: RunID is empty."
                 exit 1
             }
 
@@ -61,7 +61,8 @@ jobs:
                 `$apiUrl = "https://api.github.com/repos/${{ github.repository }}/actions/runs/`$RunId/artifacts"
                 Write-Output "DEBUG: Fetching URL: `$apiUrl"
 
-                `$resp = Invoke-RestMethod -Uri `$apiUrl -Headers `$headers -ErrorAction Stop
+                # FIX 1: Added -UseBasicParsing
+                `$resp = Invoke-RestMethod -Uri `$apiUrl -Headers `$headers -UseBasicParsing -ErrorAction Stop
                 
                 `$artifact = `$resp.artifacts | Where-Object { `$_.name -like 'restaurant-app-*' } | Select-Object -First 1
                 
@@ -69,12 +70,14 @@ jobs:
 
                 `$downloadUrl = `$artifact.archive_download_url
                 
-                `$redirect = Invoke-WebRequest -Uri `$downloadUrl -Headers `$headers -MaximumRedirection 0 -ErrorAction SilentlyContinue
+                # FIX 2: Added -UseBasicParsing
+                `$redirect = Invoke-WebRequest -Uri `$downloadUrl -Headers `$headers -MaximumRedirection 0 -UseBasicParsing -ErrorAction SilentlyContinue
                 `$finalUrl = `$redirect.Headers.Location
                 if (!`$finalUrl) { `$finalUrl = `$downloadUrl }
 
                 Write-Output "DEBUG: Downloading zip..."
-                Invoke-WebRequest -Uri `$finalUrl -OutFile 'C:/temp/app.zip'
+                # FIX 3: Added -UseBasicParsing
+                Invoke-WebRequest -Uri `$finalUrl -OutFile 'C:/temp/app.zip' -UseBasicParsing
 
                 Write-Output "DEBUG: Deploying..."
                 Stop-Service w3svc
@@ -92,6 +95,7 @@ jobs:
           
           # 3. Save and Send
           Set-Content -Path "deploy.ps1" -Value $scriptContent
+          
           az vm run-command invoke `
             --resource-group SaffronRestaurant-RG `
             --name Saffron-VM `
