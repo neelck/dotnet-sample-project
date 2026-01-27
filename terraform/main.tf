@@ -111,9 +111,14 @@ resource "azurerm_virtual_machine_extension" "bootstrap" {
   type                 = "CustomScriptExtension"
   type_handler_version = "1.10"
 
+  # This command chain:
+  # 1. Installs IIS (Web-Server)
+  # 2. Downloads .NET 9 Hosting Bundle (using safe aka.ms link and BasicParsing)
+  # 3. Installs .NET silently
+  # 4. Restarts IIS to load the new module
   settings = <<SETTINGS
     {
-        "commandToExecute": "powershell -ExecutionPolicy Unrestricted -Command \"Install-WindowsFeature -name Web-Server -IncludeManagementTools; $dotnetUrl = 'https://download.visualstudio.microsoft.com/download/pr/49961633-875b-4c07-b088-662867824141/008f1b674b01e3e7f45c2642730b2075/dotnet-hosting-9.0.1-win.exe'; Invoke-WebRequest -Uri $dotnetUrl -OutFile 'dotnet-hosting.exe'; Start-Process -FilePath 'dotnet-hosting.exe' -ArgumentList '/quiet /norestart' -Wait; iisreset\""
+        "commandToExecute": "powershell -ExecutionPolicy Unrestricted -Command \"Install-WindowsFeature -name Web-Server -IncludeManagementTools; $url = 'https://aka.ms/dotnet/9.0/dotnet-hosting-win.exe'; $output = 'C:\\dotnet-hosting.exe'; Write-Output 'Downloading .NET 9...'; Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing; Write-Output 'Installing .NET 9...'; Start-Process -FilePath $output -ArgumentList '/install', '/quiet', '/norestart' -Wait; Write-Output 'Restarting IIS...'; net stop w3svc; net start w3svc\""
     }
 SETTINGS
 
