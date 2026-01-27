@@ -31,9 +31,7 @@ jobs:
 
       - name: Deploy to Azure VM
         run: |
-          - name: Deploy via VM Run Command
-        shell: pwsh
-        run: |
+        
           # 1. Capture the values on the Runner
           $runnerRunId = "${{ github.event.workflow_run.id || github.event.inputs.manual_run_id }}"
           $runnerToken = "${{ secrets.GITHUB_TOKEN }}"
