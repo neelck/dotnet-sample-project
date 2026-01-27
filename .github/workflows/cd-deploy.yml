@@ -31,31 +31,52 @@ jobs:
 
       - name: Deploy to Azure VM
         run: |
-          # Use the Run ID from the CI trigger or the manual input
-          $RUN_ID= "${{ github.event.workflow_run.id || github.event.inputs.manual_run_id }}"
-          $TOKEN= "${{ secrets.GITHUB_TOKEN }}"
+          # 1. Capture the variables on the GitHub Runner
+          $RUN_ID = "${{ github.event.workflow_run.id || github.event.inputs.manual_run_id }}"
+          $TOKEN  = "${{ secrets.GITHUB_TOKEN }}" 
+
+          # 2. Define the script to run on the VM
+          #    - Variables WITHOUT backticks ($RUN_ID) are filled in by the Runner NOW.
+          #    - Variables WITH backticks (`$headers) are sent to the VM to run LATER.
+          $scriptBlock = @"
+            # A. Setup headers
+            `$headers = @{ 
+                'Authorization' = 'Bearer $TOKEN'
+                'Accept'        = 'application/vnd.github+json'
+                'X-GitHub-Api-Version' = '2022-11-28'
+            }
+
+            # B. Query GitHub API
+            `$apiUrl = "https://api.github.com/repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts"
+            
+            Write-Output "Fetching artifacts from: `$apiUrl"
+            `$resp = Invoke-RestMethod -Uri `$apiUrl -Headers `$headers
+
+            # C. Find the artifact download URL
+            `$artifact = `$resp.artifacts | Where-Object { `$_.name -like 'restaurant-app-*' } | Select-Object -First 1
+            `$downloadUrl = `$artifact.archive_download_url
+
+            if (!`$downloadUrl) { Write-Error "Artifact not found!"; exit 1 }
+
+            # D. Download (Handling the 302 Redirect)
+            # GitHub redirects to Azure Blob Storage, which REJECTS the Auth header.
+            # We must capture the redirect URL first, then download from there.
+            `$redirect = Invoke-WebRequest -Uri `$downloadUrl -Headers `$headers -MaximumRedirection 0 -ErrorAction SilentlyContinue
+            `$finalUrl = `$redirect.Headers.Location
+            
+            # Fallback if there was no redirect (rare)
+            if (!`$finalUrl) { `$finalUrl = `$downloadUrl }
+
+            Invoke-WebRequest -Uri `$finalUrl -OutFile 'C:/temp/app.zip'
+
+            # E. Deploy
+            Expand-Archive -Path 'C:/temp/app.zip' -DestinationPath 'C:/inetpub/wwwroot' -Force
+            iisreset
+          "@
+
+          # 3. Send the command to Azure
           az vm run-command invoke `
             --resource-group SaffronRestaurant-RG `
             --name Saffron-VM `
             --command-id RunPowerShellScript `
-            --scripts "
-              # A. Setup headers with the temporary GitHub Token
-              $headers = @{ 
-                'Authorization' = 'Bearer $TOKEN'; 
-                'Accept' = 'application/vnd.github+json';
-                'X-GitHub-Api-Version' = '2022-11-28'
-              }
-              
-              # B. Query GitHub API for the Artifact download URL
-              $apiUrl = "https://api.github.com/repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts"
-              $resp = Invoke-RestMethod -Uri $apiUrl -Headers $headers
-              
-              # C. Find our specific restaurant app zip
-              $dlUrl = $resp.artifacts | Where-Object { \$_.name -like 'restaurant-app-*' } | Select-Object -ExpandProperty download_url
-              
-              # D. Download and extract directly to IIS
-              Invoke-WebRequest -Uri \$dlUrl -Headers $headers -OutFile 'app.zip'
-              Expand-Archive -Path 'app.zip' -DestinationPath 'C:/inetpub/wwwroot' -Force
-              
-              iisreset
-            "
+            --scripts $scriptBlock
